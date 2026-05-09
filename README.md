@@ -250,12 +250,12 @@ X^T dz = \begin{bmatrix}
 2\cdot0.2 + 6\cdot(-0.1)
 \end{bmatrix}
 = \begin{bmatrix}
-0.4 - 0.3 \\
+0.2 - 0.3 \\
 0.8 - 0.5 \\
-0.2 - 0.6
+0.4 - 0.6
 \end{bmatrix}
 = \begin{bmatrix}
-0.1 \\ 0.3 \\ -0.4
+-0.1 \\ 0.3 \\ -0.2
 \end{bmatrix}
 $$
 
