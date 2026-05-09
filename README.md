@@ -141,7 +141,7 @@ $$
 dw = \frac{1}{m} X^T dz
 $$
 
-Expanded for a single weight `w_j`:
+Expanded for a single weight $w_j$:
 
 $$
 dw_j = \frac{1}{m} \sum_{i=1}^{m} x_{ij} \cdot dz_i
