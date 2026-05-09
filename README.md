@@ -530,6 +530,21 @@ python3 single_neuron_mnist.py --epochs 150 --lr 0.05
 python3 single_neuron_mnist.py --no-plot
 ```
 
+This training step now also saves:
+
+- `artifacts/neuron_weights.npy`
+- `artifacts/neuron_bias.npy`
+
+## Streamlit App
+
+After training, launch the browser UI:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The app lets you draw a digit in the browser, preprocesses the canvas to `28x28`, and shows the predicted class (`0` or `1`) plus the probability of being `1`.
+
 ## Expected Result
 
 When training runs correctly, you should see:
@@ -537,4 +552,5 @@ When training runs correctly, you should see:
 - Loss values decreasing over epochs (from ~0.7 down to ~0.1 or lower)
 - High training accuracy (typically >95%)
 - High test accuracy (typically >95%)
+- Saved model files in `artifacts/neuron_weights.npy` and `artifacts/neuron_bias.npy`
 - A saved plot in `artifacts/loss_curve.png` showing the loss curve

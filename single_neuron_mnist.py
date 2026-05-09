@@ -90,6 +90,13 @@ def save_loss_plot(losses, output_path: Path):
     plt.close()
 
 
+def save_model(model: SingleNeuron, weights_path: Path, bias_path: Path):
+    weights_path.parent.mkdir(parents=True, exist_ok=True)
+    bias_path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(weights_path, model.w)
+    np.save(bias_path, np.array(model.b, dtype=np.float32))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Train a single-neuron classifier for MNIST digits 0 and 1."
@@ -107,6 +114,16 @@ def parse_args():
         "--no-plot",
         action="store_true",
         help="Skip saving the loss curve plot.",
+    )
+    parser.add_argument(
+        "--weights-path",
+        type=Path,
+        default=Path("artifacts/neuron_weights.npy"),
+    )
+    parser.add_argument(
+        "--bias-path",
+        type=Path,
+        default=Path("artifacts/neuron_bias.npy"),
     )
     return parser.parse_args()
 
@@ -129,6 +146,10 @@ def main():
     print(f"Test samples: {x_test.shape[0]}")
     print(f"Training accuracy: {train_acc * 100:.2f}%")
     print(f"Test accuracy: {test_acc * 100:.2f}%")
+
+    save_model(model, args.weights_path, args.bias_path)
+    print(f"Weights saved to: {args.weights_path}")
+    print(f"Bias saved to: {args.bias_path}")
 
     if not args.no_plot:
         save_loss_plot(losses, args.plot_path)
