@@ -198,30 +198,13 @@ $$
 
 Notice each element is the **dot product** of the column vector $dz$ (size $m$) with the column of $X$ for that feature.
 
-In matrix terms, stacking the columns of $X$ as column vectors, the operation "multiply $dz$ by each column and sum" is exactly **$X^T dz$**:
+In matrix terms, this column-wise accumulation is exactly **$X^T dz$**.
 
-- $X^T$ is the **transpose** of $X$: size $n \times m$ (rows = features, columns = examples).
-- Multiply $X^T$ (size $n \times m$) by $dz$ (size $m \times 1$): result is $n \times 1$.
+- $X^T$ has size $n \times m$.
+- $dz$ has size $m \times 1$.
+- Therefore, $X^T dz$ has size $n \times 1$, matching the shape of $dw$.
 
-$$
-X^T dz =
-\begin{bmatrix}
-\vdots & \vdots & & \vdots \\
-\text{col}_1 & \text{col}_2 & \dots & \text{col}_m \\
-\vdots & \vdots & & \vdots
-\end{bmatrix}_{n \times m}
-\cdot
-\begin{bmatrix} dz_1 \\ dz_2 \\ \vdots \\ dz_m \end{bmatrix}
-=
-\begin{bmatrix}
-\sum_{i=1}^m X_{i,1} \cdot dz_i \\
-\sum_{i=1}^m X_{i,2} \cdot dz_i \\
-\vdots \\
-\sum_{i=1}^m X_{i,n} \cdot dz_i
-\end{bmatrix}
-$$
-
-That's exactly what we need. So:
+So:
 
 $$
 dw = \frac{1}{m} X^T dz
