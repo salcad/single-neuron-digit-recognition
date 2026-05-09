@@ -1,0 +1,557 @@
+# Neural Network from Scratch: A Deep Dive into Single Neuron Classification
+
+**Understanding Gradient Descent, Backpropagation, and the Math Behind Machine Learning, One Neuron at a Time**
+
+This project implements a complete neural network learning pipeline from scratch using only `numpy`. We train a single logistic neuron to classify handwritten digits (0 vs 1) from the MNIST dataset, providing a crystal-clear explanation of every mathematical concept: forward propagation, binary cross-entropy loss, the chain rule, backpropagation, and gradient descent.
+
+Whether you're a beginner trying to understand how neural networks actually learn, or a practitioner who wants to see the math behind the code, this project will show you exactly how a single neuron learns from data.
+
+## What This App Does
+
+The app downloads MNIST through `sklearn.datasets.fetch_openml` using `parser="liac-arff"`, keeps only labels `0` and `1`, normalizes pixel values to the range `[0, 1]`, trains one logistic neuron, prints train and test accuracy, and saves the loss curve to `artifacts/loss_curve.png`.
+
+Each image has `28 x 28 = 784` pixels, so every sample is represented as a vector:
+
+$$
+x = [x_1, x_2, x_3, \ldots, x_{784}]
+$$
+
+The model learns one weight for each pixel and one bias term:
+
+$$
+w = [w_1, w_2, w_3, \ldots, w_{784}]
+$$
+
+$$
+b = \text{bias}
+$$
+
+## How The Single Neuron Learns
+
+The single neuron learns by following a simple but powerful process: **make a prediction, measure the error, calculate how to improve, and update**. This is the essence of gradient descent. Let's walk through each step with the actual math formulas used in this app.
+
+### Step 1: Forward Pass - Making Predictions
+
+The neuron's job is to look at an image and output a probability that it's a `1` (vs a `0`).
+
+**1.1 Compute the Weighted Sum**
+
+The neuron first calculates a raw score by multiplying each pixel by its learned weight and adding a bias:
+
+$$
+z = x \cdot w + b = \sum_{i=1}^{784} x_i w_i + b
+$$
+
+**What each term means:**
+- $x_i$ = the brightness of pixel $i$ (0 = black, 1 = white, after normalization)
+- $w_i$ = the weight the neuron has learned for pixel $i$ (positive = makes $z$ bigger, suggests digit `1`; negative = makes $z$ smaller, suggests digit `0`)
+- $b$ = bias term (shifts the decision boundary)
+- $z$ = the raw score before converting to probability
+
+**What does $z$ tell us?**
+- If $z$ is a **large positive number**, the neuron strongly believes the image is a `1`
+- If $z$ is a **large negative number**, the neuron strongly believes the image is a `0`
+- If $z$ is **near 0**, the neuron is uncertain
+
+**1.2 Convert to Probability (Sigmoid Activation)**
+
+The raw score $z$ can be any real number, but we need a probability between 0 and 1. The sigmoid function transforms $z$ into a probability:
+
+$$
+\sigma(z) = \frac{1}{1 + e^{-z}}
+$$
+
+So the final prediction (probability that the image is a `1`) is:
+
+$$
+\hat{y} = \sigma(z) = \frac{1}{1 + e^{-(x \cdot w + b)}}
+$$
+
+**Why sigmoid?**
+- It maps any real number to the range $(0, 1)$
+- $\sigma(0) = 0.5$ (the decision boundary)
+- As $z \to \infty$, $\sigma(z) \to 1$ (confident it's a `1`)
+- As $z \to -\infty$, $\sigma(z) \to 0$ (confident it's a `0`)
+
+**How to interpret $\hat{y}$:**
+- $\hat{y} = 0.95$ means 95% confident it's a `1` (only 5% chance it's a `0`)
+- $\hat{y} = 0.05$ means 5% confident it's a `1` (95% confident it's a `0`)
+- $\hat{y} = 0.50$ means completely uncertain (could be either)
+
+### Step 2: Measuring Mistakes - The Loss Function
+
+Now the neuron has made a prediction $\hat{y}$, but was it right? To know, we compare $\hat{y}$ to the true label $y$ (which is either 0 or 1, since we only have digits `0` and `1`).
+
+**The Binary Cross-Entropy Loss**
+
+The app uses the **binary cross-entropy loss** to measure how wrong the prediction was:
+
+$$
+L = -\frac{1}{m} \sum_{i=1}^{m} \left[ y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i) \right]
+$$
+
+**What each term means:**
+- $m$ = number of training samples in the batch
+- $y_i$ = true label for sample $i$ (0 for digit `0`, 1 for digit `1`)
+- $\hat{y}_i$ = predicted probability for sample $i$ (between 0 and 1)
+- $\log$ = natural logarithm
+
+**Why this loss function works:**
+
+Let's see what happens in different scenarios:
+
+**Case 1: True label is `1` ($y = 1$)**
+The loss simplifies to: $L = -\log(\hat{y})$
+- If $\hat{y} = 0.9$ (correct, confident): $L = -\log(0.9) \approx 0.105$ (small loss ✓)
+- If $\hat{y} = 0.5$ (correct, uncertain): $L = -\log(0.5) \approx 0.693$ (medium loss)
+- If $\hat{y} = 0.1$ (wrong, confident): $L = -\log(0.1) \approx 2.303$ (large loss ✗)
+
+**Case 2: True label is `0` ($y = 0$)**
+The loss simplifies to: $L = -\log(1 - \hat{y})$
+- If $\hat{y} = 0.1$ (correct, confident): $L = -\log(0.9) \approx 0.105$ (small loss ✓)
+- If $\hat{y} = 0.5$ (correct, uncertain): $L = -\log(0.5) \approx 0.693$ (medium loss)
+- If $\hat{y} = 0.9$ (wrong, confident): $L = -\log(0.1) \approx 2.303$ (large loss ✗)
+
+**Key insight:** The loss heavily penalizes confident wrong predictions. This forces the neuron to be careful about making bold predictions unless it's really sure.
+
+### Step 3: Learning from Mistakes,  Computing Gradients
+
+Now we know how wrong the prediction was (via the loss). But simply knowing we're wrong doesn't help us improve. We need to know **how to change** the weights `w` and bias `b` to make better predictions next time.
+
+**The key idea:** Calculate how much each weight contributed to the error (the gradient), then adjust in the opposite direction.
+
+**3.1 Prediction Error (The Derivative at Output)**
+
+For logistic regression with sigmoid activation and cross-entropy loss, the derivative at the output layer has a beautiful simplification:
+
+$$
+dz = \hat{y} - y
+$$
+
+**What does $dz$ tell us?**
+- $dz > 0$: We predicted too high (thought it was 1 when it was actually 0)
+- $dz < 0$: We predicted too low (thought it was 0 when it was actually 1)
+- $dz = 0$: Perfect prediction! No error.
+
+**3.2 Weight Gradient (How Each Weight Should Change)**
+
+To know how each weight should change, we compute the gradient with respect to each weight:
+
+$$
+dw = \frac{1}{m} X^T dz
+$$
+
+Expanded for a single weight `w_j`:
+
+$$
+dw_j = \frac{1}{m} \sum_{i=1}^{m} x_{ij} \cdot dz_i
+$$
+
+**What does $dw$ tell us?**
+
+The gradient $dw_j$ represents how much weight $w_j$ contributed to the overall error:
+- If $dw_j$ is **positive**: Increasing $w_j$ would increase the loss → we should **decrease** $w_j$
+- If $dw_j$ is **negative**: Increasing $w_j$ would decrease the loss → we should **increase** $w_j$
+- If $dw_j$ is **zero**: This weight doesn't affect the loss → no change needed
+
+---
+
+### Deep Dive: Why $X^T$ (Transpose) Appears in $dw = \frac{1}{m} X^T dz$
+
+Let me explain $dw = \frac{1}{m} X^T dz$ with a focus on why $X^T$ (the **transpose of $X$**) appears.
+
+#### 1. Understand the dimensions
+
+Suppose:
+- We have $m$ training examples (batch size).
+- Each example has $n$ input features (e.g., $n = 784$ pixels).
+- $X$ is an $m \times n$ matrix: each row is one example, each column is one feature.
+- $dz$ is a column vector of size $m \times 1$: the error $(\hat{y}_i - y_i)$ for each example.
+
+Example with tiny numbers:
+$m = 3$ examples, $n = 4$ features. Then $X$ is $3 \times 4$, $dz$ is $3 \times 1$.
+
+#### 2. What we want: $dw$
+
+$dw$ should be a column vector of size $n \times 1$ (one gradient per weight).
+For weight $w_j$ (associated with feature $j$), the gradient is:
+
+$$
+\frac{\partial L_{\text{total}}}{\partial w_j} = \frac{1}{m} \sum_{i=1}^{m} dz_i \cdot X_{i,j}
+$$
+
+where $X_{i,j}$ is the value of feature $j$ in example $i$.
+
+#### 3. Matrix multiplication form
+
+If we write this for all $j$ (all weights) at once, we want:
+
+$$
+dw = \frac{1}{m}
+\begin{bmatrix}
+\sum_i dz_i \cdot X_{i,1} \\
+\sum_i dz_i \cdot X_{i,2} \\
+\vdots \\
+\sum_i dz_i \cdot X_{i,n}
+\end{bmatrix}
+$$
+
+Notice each element is the **dot product** of the column vector $dz$ (size $m$) with the column of $X$ for that feature.
+
+In matrix terms, stacking the columns of $X$ as column vectors, the operation "multiply $dz$ by each column and sum" is exactly **$X^T dz$**:
+
+- $X^T$ is the **transpose** of $X$: size $n \times m$ (rows = features, columns = examples).
+- Multiply $X^T$ (size $n \times m$) by $dz$ (size $m \times 1$): result is $n \times 1$.
+
+$$
+X^T dz =
+\begin{bmatrix}
+\vdots & \vdots & & \vdots \\
+\text{col}_1 & \text{col}_2 & \dots & \text{col}_m \\
+\vdots & \vdots & & \vdots
+\end{bmatrix}_{n \times m}
+\cdot
+\begin{bmatrix} dz_1 \\ dz_2 \\ \vdots \\ dz_m \end{bmatrix}
+=
+\begin{bmatrix}
+\sum_{i=1}^m X_{i,1} \cdot dz_i \\
+\sum_{i=1}^m X_{i,2} \cdot dz_i \\
+\vdots \\
+\sum_{i=1}^m X_{i,n} \cdot dz_i
+\end{bmatrix}
+$$
+
+That's exactly what we need. So:
+
+$$
+dw = \frac{1}{m} X^T dz
+$$
+
+#### 4. Why the transpose? – intuitive reason
+
+- $X$ is organised as **examples × features** (rows = examples, columns = features).
+- To compute "for each feature, sum over examples of (error × feature value)", we need to **flip** the orientation – hence transpose.
+- Without the transpose, $X dz$ would be invalid or meaningless because dimensions wouldn't match: $X$ is $m \times n$, $dz$ is $m \times 1$ – you cannot multiply $X$ (left) by $dz$ (right) unless $n = m$ (which is not true).
+  But $X^T$ is $n \times m$, so $X^T dz$ works: $(n \times m) \cdot (m \times 1) = (n \times 1)$.
+
+#### 5. Concrete numeric example (very small)
+
+$m = 2$ examples, $n = 3$ features.
+
+$$
+X = \begin{bmatrix}
+1 & 4 & 2 \\
+3 & 5 & 6
+\end{bmatrix}, \quad
+dz = \begin{bmatrix} 0.2 \\ -0.1 \end{bmatrix}
+$$
+
+Compute manually for $w_1$ (first feature):
+$\frac{1}{2}(0.2 \cdot 1 + (-0.1) \cdot 3) = \frac{1}{2}(0.2 - 0.3) = -0.05$
+For $w_2$: $\frac{1}{2}(0.2 \cdot 4 + (-0.1) \cdot 5) = \frac{1}{2}(0.8 - 0.5) = 0.15$
+For $w_3$: $\frac{1}{2}(0.2 \cdot 2 + (-0.1) \cdot 6) = \frac{1}{2}(0.4 - 0.6) = -0.2$
+
+So $dw = [-0.05, 0.15, -0.1]^T$.
+
+Now compute $X^T dz$:
+
+$$
+X^T = \begin{bmatrix}
+1 & 3 \\
+4 & 5 \\
+2 & 6
+\end{bmatrix}, \quad
+X^T dz = \begin{bmatrix}
+1\cdot0.2 + 3\cdot(-0.1) \\
+4\cdot0.2 + 5\cdot(-0.1) \\
+2\cdot0.2 + 6\cdot(-0.1)
+\end{bmatrix}
+= \begin{bmatrix}
+0.4 - 0.3 \\
+0.8 - 0.5 \\
+0.2 - 0.6
+\end{bmatrix}
+= \begin{bmatrix}
+0.1 \\ 0.3 \\ -0.4
+\end{bmatrix}
+$$
+
+Then $\frac{1}{2} X^T dz = [0.05, 0.15, -0.1]^T$ – matches manual result.
+
+#### Summary
+
+- $X^T$ transposes the matrix so that features become rows and examples become columns, allowing a clean matrix multiplication that sums over examples for each feature.
+- The formula $dw = \frac{1}{m} X^T dz$ is a compact, vectorised way to compute all weight gradients at once.
+
+---
+
+### Deep Dive: The Backward Pass and Chain Rule
+
+Let's break down the **backward pass** step by step. The name "backward pass" means we propagate the error from the output back to the parameters (weights and bias) to compute how much each contributed to the loss. This is done using the **chain rule** of calculus.
+
+#### 1. What We Have
+
+- **Forward pass** gave us:
+  - $z = \mathbf{w} \cdot \mathbf{x} + b$
+  - $\hat{y} = \sigma(z) = \frac{1}{1+e^{-z}}$
+
+- **Loss** for one example (binary cross-entropy):
+  - $L = -[\, y \log \hat{y} + (1-y)\log(1-\hat{y}) \,]$
+  - For many examples (batch of size $m$), the total loss is the average:
+  - $L_{\text{total}} = \frac{1}{m} \sum_{i=1}^m L_i$
+
+Our goal: find how $L_{\text{total}}$ changes when we change each weight $w_j$ and the bias $b$ – i.e., the partial derivatives $\frac{\partial L_{\text{total}}}{\partial w_j}$ and $\frac{\partial L_{\text{total}}}{\partial b}$.
+
+#### 2. Chain Rule: From Loss Back to Weights
+
+We know the loss depends on $\hat{y}$, which depends on $z$, which depends on $w_j$ and $b$. So:
+
+$$
+\frac{\partial L}{\partial w_j} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z} \cdot \frac{\partial z}{\partial w_j}
+$$
+
+Similarly for $b$: $\frac{\partial L}{\partial b} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z} \cdot \frac{\partial z}{\partial b}$
+
+Let's compute each piece.
+
+##### a. $\frac{\partial L}{\partial \hat{y}}$ (derivative of loss w.r.t predicted probability)
+
+For a single example:
+
+$$
+\frac{\partial L}{\partial \hat{y}} = -\frac{y}{\hat{y}} + \frac{1-y}{1-\hat{y}}
+$$
+
+We can rewrite it as:
+
+$$
+\frac{\partial L}{\partial \hat{y}} = \frac{\hat{y} - y}{\hat{y}(1-\hat{y})}
+$$
+
+##### b. $\frac{\partial \hat{y}}{\partial z}$ (derivative of sigmoid)
+
+The derivative of the sigmoid is $\hat{y}(1-\hat{y})$.
+
+##### c. $\frac{\partial z}{\partial w_j}$ and $\frac{\partial z}{\partial b}$
+
+From $z = w_1 x_1 + \dots + w_j x_j + \dots + b$:
+
+$$
+\frac{\partial z}{\partial w_j} = x_j, \quad \frac{\partial z}{\partial b} = 1
+$$
+
+##### d. Putting it together
+
+$$
+\frac{\partial L}{\partial w_j} = \left[ \frac{\hat{y} - y}{\hat{y}(1-\hat{y})} \right] \cdot \left[ \hat{y}(1-\hat{y}) \right] \cdot x_j = (\hat{y} - y) \cdot x_j
+$$
+
+The $\hat{y}(1-\hat{y})$ cancels nicely! So for one example:
+
+$$
+\frac{\partial L}{\partial w_j} = (\hat{y} - y) \, x_j
+$$
+$$
+\frac{\partial L}{\partial b} = (\hat{y} - y) \cdot 1 = \hat{y} - y
+$$
+
+#### 3. Over a batch of $m$ examples
+
+To get the gradient of the **average loss** $L_{\text{total}}$:
+
+$$
+\frac{\partial L_{\text{total}}}{\partial w_j} = \frac{1}{m} \sum_{i=1}^{m} (\hat{y}_i - y_i) \, x_{i,j}
+$$
+$$
+\frac{\partial L_{\text{total}}}{\partial b} = \frac{1}{m} \sum_{i=1}^{m} (\hat{y}_i - y_i)
+$$
+
+#### 4. Vectorised form 
+
+Let:
+- $X$ be an $m \times n$ matrix (each row is one example, $n$ = number of features, e.g., 784 pixels)
+- $\mathbf{y}$ be a column vector of true labels (size $m \times 1$)
+- $\hat{\mathbf{y}}$ be the predicted probabilities (size $m \times 1$)
+- $dz = \hat{\mathbf{y}} - \mathbf{y}$ (size $m \times 1$)
+
+Then:
+
+$$
+dw = \frac{1}{m} X^T \, dz \quad \text{(size $n \times 1$)}
+$$
+$$
+db = \frac{1}{m} \sum_{i=1}^m dz_i = \frac{1}{m} \cdot \text{sum}(dz)
+$$
+
+#### 5. Intuition behind $dz = \hat{y} - y$
+
+Notice that the prediction error $dz$ is the simple difference between predicted probability and true label.
+- If the true label is 1 ($y=1$) and neuron predicts $\hat{y}=0.9$, then $dz = 0.9-1 = -0.1$ (negative).
+- This negative value, multiplied by the input $x_j$ and learning rate, will **decrease** the weight if $x_j$ is positive – which is correct because the prediction was too high, so we want to lower it.
+
+The simple formula $dz = \hat{y} - y$ emerges directly from the magical cancellation of sigmoid derivatives with binary cross‑entropy – this is why the logistic neuron is so elegant.
+
+#### 6. Summary of the backward pass
+
+1. Compute $dz = \hat{y} - y$ (a vector of errors on the batch).
+2. Compute $dw = \frac{1}{m} X^T dz$ – each weight gets the average contribution from all examples (error × its input feature).
+3. Compute $db = \frac{1}{m} \sum dz$ – the bias gets the average error.
+
+Then use these gradients to update $w$ and $b$ with gradient descent. The backward pass is the "learning" part – it tells each weight and bias how much to change to reduce the loss.
+
+---
+
+### Step 4: Improving the Model - Gradient Descent Update
+
+Now we know how to adjust each parameter. The gradient descent algorithm updates the parameters to reduce the loss:
+
+**Weight update:**
+
+$$
+w \leftarrow w - \alpha \cdot dw
+$$
+
+**Bias update:**
+
+$$
+b \leftarrow b - \alpha \cdot db
+$$
+
+Where $\alpha$ is the **learning rate** (controlled by the `--lr` argument, default is 0.1).
+
+**Why do we subtract the gradient?**
+
+- The gradient `dw` points in the direction of **steepest increase** in loss
+- We want to **decrease** the loss, so we move in the **opposite direction**
+- The learning rate $\alpha$ controls the step size
+
+**What happens during training?**
+
+| Scenario | What Happens | Learning Rate Effect |
+|----------|--------------|---------------------|
+| $dw$ is large, $x_j$ was bright | Weight gets updated a lot | Large $\alpha$ → faster learning but might overshoot |
+| $dw$ is small, prediction was close | Weight gets updated a little | Small $\alpha$ → slower but more stable learning |
+| $dz$ is positive (predicted too high) | Weight decreases | Optimal $\alpha$ → converges smoothly to good weights |
+
+## The Complete Learning Loop
+
+Putting it all together, here's what happens in each training epoch:
+
+1. **Forward Pass**: Make predictions
+   - Compute $z = Xw + b$ for all training samples (matrix multiplication)
+   - Apply sigmoid: $\hat{y} = \sigma(z) = 1 / (1 + e^{-z})$
+
+2. **Loss Calculation**: Measure how wrong we are
+   - Compute `L` using binary cross-entropy
+   - $L = -(1/m) * sum(y * log(ŷ) + (1-y) * log(1-ŷ))$
+
+3. **Backward Pass**: Calculate how to improve
+   - Compute prediction error: $dz = \hat{y} - y$
+   - Compute weight gradients: $dw = (1/m) * X^T * dz$
+   - Compute bias gradient: $db = (1/m) * sum(dz)$
+
+4. **Parameter Update**: Apply the improvements
+   - Update weights: $w = w - α * dw$
+   - Update bias: $b = b - α * db$
+
+5. **Progress Tracking**: Store loss for visualization
+
+**Repeat for many epochs** (default is 100) until the loss stops decreasing and accuracy plateaus.
+
+## Why This Works: Key Insights
+
+### 1. Weight Initialization Matters
+
+We initialize weights from a normal distribution:
+
+$$
+w \sim \mathcal{N}(0, 0.01)
+$$
+
+**Why small weights?**
+- Large initial weights → large `z` values → sigmoid saturates (gradient becomes nearly zero) → can't learn
+- Small initial weights → moderate `z` values → sigmoid in active region (gradient ≈ 0.25) → can learn
+
+### 2. Sigmoid Properties
+
+The sigmoid function has important characteristics:
+
+$$
+\sigma(z) = \frac{1}{1 + e^{-z}}
+$$
+
+**Properties:**
+- Maps any real number to $(0, 1)$ range
+- $\sigma(0) = 0.5$ (the decision boundary)
+- As $z \to \infty$, $\sigma(z) \to 1$ (confident it's a `1`)
+- As $z \to -\infty$, $\sigma(z) \to 0$ (confident it's a `0`)
+
+### 3. Loss Function Choice
+
+Binary cross-entropy is ideal for binary classification:
+
+$$
+L = -[y \log(\hat{y}) + (1-y)\log(1-\hat{y})]
+$$
+
+**Why it works:**
+- Penalizes confident wrong predictions heavily
+- Works well with sigmoid (combined gradient simplifies to $dz = \hat{y} - y$)
+- Convex loss landscape → guaranteed convergence to global minimum
+
+### 4. Gradient Descent Dynamics
+
+The update rule:
+
+$$
+w \leftarrow w - \alpha \cdot \frac{\partial L}{\partial w}
+$$
+
+**How learning progresses:**
+- Early epochs: Large gradients → big weight updates → loss drops quickly
+- Later epochs: Small gradients → fine-tuning → loss converges
+- With proper learning rate: Smooth convergence to optimal weights
+
+## Decision Rule for Classification
+
+After training, the neuron classifies images using:
+
+$$
+\text{prediction} =
+\begin{cases}
+1 & \text{if } \hat{y} \geq 0.5 \\
+0 & \text{if } \hat{y} < 0.5
+\end{cases}
+$$
+
+The threshold of 0.5 is the natural decision boundary for the sigmoid function since $\sigma(0) = 0.5$.
+
+## Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Run
+
+```bash
+python3 single_neuron_mnist.py
+```
+
+Optional arguments:
+
+```bash
+python3 single_neuron_mnist.py --epochs 150 --lr 0.05
+python3 single_neuron_mnist.py --no-plot
+```
+
+## Expected Result
+
+When training runs correctly, you should see:
+
+- Loss values decreasing over epochs (from ~0.7 down to ~0.1 or lower)
+- High training accuracy (typically >95%)
+- High test accuracy (typically >95%)
+- A saved plot in `artifacts/loss_curve.png` showing the loss curve
