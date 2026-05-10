@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import copy
+import json
+from typing import Optional
 import numpy as np
 import streamlit as st
 from PIL import Image
@@ -60,9 +63,58 @@ def predict(image_array: np.ndarray, weights: np.ndarray, bias: float) -> tuple[
     return probability, prediction
 
 
+def normalize_drawing(json_data: Optional[dict]) -> Optional[dict]:
+    if not json_data:
+        return None
+    objects = json_data.get("objects", [])
+    if not objects:
+        return None
+    return copy.deepcopy(json_data)
+
+
+def serialize_drawing(json_data: Optional[dict]) -> Optional[str]:
+    if json_data is None:
+        return None
+    return json.dumps(json_data, sort_keys=True)
+
+
+def undo_canvas() -> None:
+    history = st.session_state.canvas_history
+    if not history:
+        return
+    history.pop()
+    previous_drawing = copy.deepcopy(history[-1]) if history else None
+    st.session_state.canvas_drawing = previous_drawing
+    st.session_state.canvas_serialized = serialize_drawing(previous_drawing)
+    st.session_state.canvas_version += 1
+
+
 st.set_page_config(page_title="Digit Classifier", page_icon="✍️")
 st.title("Handwritten Digit Classifier (0 vs 1)")
 st.write("Draw a `0` or `1`, then review the model prediction.")
+st.markdown(
+    """
+    <style>
+    div[data-testid="stButton"] > button {
+        color: white;
+        border: 1px solid white;
+        background: transparent;
+    }
+    div[data-testid="stButton"] > button:hover {
+        color: white;
+        border-color: white;
+        background: rgba(255, 255, 255, 0.08);
+    }
+    div[data-testid="stButton"] > button:disabled {
+        color: #808080;
+        border-color: #808080;
+        background: transparent;
+        opacity: 1;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 if not WEIGHTS_PATH.exists() or not BIAS_PATH.exists():
     st.error("Model files are missing. Run `python3 single_neuron_mnist.py` first.")
@@ -70,9 +122,24 @@ if not WEIGHTS_PATH.exists() or not BIAS_PATH.exists():
 
 weights, bias = load_model()
 
+if "canvas_history" not in st.session_state:
+    st.session_state.canvas_history = []
+if "canvas_drawing" not in st.session_state:
+    st.session_state.canvas_drawing = None
+if "canvas_serialized" not in st.session_state:
+    st.session_state.canvas_serialized = None
+if "canvas_version" not in st.session_state:
+    st.session_state.canvas_version = 0
+
 col1, col2 = st.columns([1.2, 1])
 
 with col1:
+    st.button(
+        "Clear",
+        on_click=undo_canvas,
+        disabled=not st.session_state.canvas_history,
+        use_container_width=False,
+    )
     canvas_result = st_canvas(
         fill_color="rgba(255, 255, 255, 1)",
         stroke_width=16,
@@ -81,12 +148,26 @@ with col1:
         width=280,
         height=280,
         drawing_mode="freedraw",
-        key="canvas",
+        initial_drawing=st.session_state.canvas_drawing,
+        display_toolbar=False,
+        key=f"canvas_{st.session_state.canvas_version}",
     )
 
 with col2:
     st.write("Model files loaded:")
     st.code(f"{WEIGHTS_PATH.name}\n{BIAS_PATH.name}")
+
+current_drawing = normalize_drawing(canvas_result.json_data)
+current_serialized = serialize_drawing(current_drawing)
+
+if current_serialized != st.session_state.canvas_serialized:
+    st.session_state.canvas_drawing = copy.deepcopy(current_drawing)
+    st.session_state.canvas_serialized = current_serialized
+    if current_drawing is None:
+        st.session_state.canvas_history = []
+    else:
+        st.session_state.canvas_history.append(copy.deepcopy(current_drawing))
+    st.rerun()
 
 if canvas_result.image_data is None:
     st.stop()

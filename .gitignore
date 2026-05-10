@@ -17,3 +17,4 @@ __pycache__/
 .idea/
 .vscode/
 artifacts/
+trash_rm_scripts/
