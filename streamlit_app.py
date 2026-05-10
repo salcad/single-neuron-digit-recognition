@@ -90,7 +90,7 @@ def undo_canvas() -> None:
 
 
 st.set_page_config(page_title="Digit Classifier", page_icon="✍️")
-st.title("Handwritten Digit Classifier (0 vs 1)")
+st.markdown("<h2>Handwritten Digit Classifier (0 vs 1)</h2>", unsafe_allow_html=True)
 st.write("Draw a `0` or `1`, then review the model prediction.")
 st.markdown(
     """
