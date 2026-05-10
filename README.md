@@ -156,7 +156,7 @@ The gradient $dw_j$ represents how much weight $w_j$ contributed to the overall 
 
 ---
 
-### Deep Dive: Why $X^T$ (Transpose) Appears in $dw = \frac{1}{m} X^T dz$
+### Deep Dive: Why$X^T$(Transpose) Appears in $dw = \frac{1}{m} X^T dz$
 
 Let me explain $dw = \frac{1}{m} X^T dz$ with a focus on why $X^T$ (the **transpose of $X$**) appears.
 
@@ -210,44 +210,92 @@ $$
 dw = \frac{1}{m} X^T dz
 $$
 
-#### 4. Why the transpose? – intuitive reason
+### 4. Why the transpose? intuitive reason
 
-- $X$ is organised as **examples × features** (rows = examples, columns = features).
-- To compute "for each feature, sum over examples of (error × feature value)", we need to **flip** the orientation – hence transpose.
-- Without the transpose, $X dz$ would be invalid or meaningless because dimensions wouldn't match: $X$ is $m \times n$, $dz$ is $m \times 1$ – you cannot multiply $X$ (left) by $dz$ (right) unless $n = m$ (which is not true).
-  But $X^T$ is $n \times m$, so $X^T dz$ works: $(n \times m) \cdot (m \times 1) = (n \times 1)$.
+Let's break down the **manual computation** step by step, using the same small example.
 
-#### 5. Concrete numeric example (very small)
+#### The setup
 
-$m = 2$ examples, $n = 3$ features.
+We have:
+
+- **$m = 2$** examples  
+- **$n = 3$** features per example  
+
+Matrix $X$(examples in rows, features in columns):
 
 $$
 X = \begin{bmatrix}
 1 & 4 & 2 \\
 3 & 5 & 6
-\end{bmatrix}, \quad
+\end{bmatrix}
+$$
+
+Error vector $dz$ (one error per example):
+
+$$
 dz = \begin{bmatrix} 0.2 \\ -0.1 \end{bmatrix}
 $$
 
-Compute manually for $w_1$ (first feature):
-$\frac{1}{2}(0.2 \cdot 1 + (-0.1) \cdot 3) = \frac{1}{2}(0.2 - 0.3) = -0.05$
-For $w_2$: $\frac{1}{2}(0.2 \cdot 4 + (-0.1) \cdot 5) = \frac{1}{2}(0.8 - 0.5) = 0.15$
-For $w_3$: $\frac{1}{2}(0.2 \cdot 2 + (-0.1) \cdot 6) = \frac{1}{2}(0.4 - 0.6) = -0.2$
+We want $dw$ the gradient for each weight (one per feature).
 
-So $dw = [-0.05, 0.15, -0.1]^T$.
+#### Manual formula for one weight
 
-Now compute $X^T dz$:
+For weight $w_j$(associated with feature$j$):
+
+$$
+dw_j = \frac{1}{m} \sum_{i=1}^{m} dz_i \cdot X_{i,j}
+$$
+
+That is: multiply each example’s error by its feature value, sum over all examples, then divide by $m$.
+
+#### Compute $dw_1$ (first feature, column 1 of $X$)
+
+- Example 1: $dz_1 = 0.2$,$X_{1,1} = 1$ → contribution = $0.2 \times 1 = 0.2$
+- Example 2: $dz_2 = -0.1$,$X_{2,1} = 3$ → contribution = $(-0.1) \times 3 = -0.3$
+- Sum = $0.2 + (-0.3) = -0.1$
+- Divide by $m = 2$: $-0.1 / 2 = -0.05$
+
+Thus $dw_1 = -0.05$.
+
+#### Compute $dw_2$ (second feature, column 2)
+
+- Example 1: $0.2 \times 4 = 0.8$
+- Example 2: $(-0.1) \times 5 = -0.5$
+- Sum = $0.8 - 0.5 = 0.3$
+- Divide by 2: $0.3 / 2 = 0.15$
+
+$dw_2 = 0.15$.
+
+#### Compute $dw_3$ (third feature, column 3)
+
+- Example 1: $0.2 \times 2 = 0.4$
+- Example 2: $(-0.1) \times 6 = -0.6$
+- Sum = $0.4 - 0.6 = -0.2$
+- Divide by 2: $-0.2 / 2 = -0.1$
+
+$dw_3 = -0.1$.
+
+So $dw = \begin{bmatrix} -0.05 \\ 0.15 \\ -0.1 \end{bmatrix}$.
+
+#### Now do the same using $X^T dz$ (vectorised)
+
+First, compute $X^T$(transpose of $X$):
 
 $$
 X^T = \begin{bmatrix}
 1 & 3 \\
 4 & 5 \\
 2 & 6
-\end{bmatrix}, \quad
+\end{bmatrix}
+$$
+
+Now multiply $X^T$ (size $3 \times 2$) by $dz$ (size$2 \times 1$):
+
+$$
 X^T dz = \begin{bmatrix}
-1\cdot0.2 + 3\cdot(-0.1) \\
-4\cdot0.2 + 5\cdot(-0.1) \\
-2\cdot0.2 + 6\cdot(-0.1)
+1\cdot 0.2 & + & 3\cdot (-0.1) \\
+4\cdot 0.2 & + & 5\cdot (-0.1) \\
+2\cdot 0.2 & + & 6\cdot (-0.1)
 \end{bmatrix}
 = \begin{bmatrix}
 0.2 - 0.3 \\
@@ -255,16 +303,28 @@ X^T dz = \begin{bmatrix}
 0.4 - 0.6
 \end{bmatrix}
 = \begin{bmatrix}
--0.1 \\ 0.3 \\ -0.2
+-0.1 \\
+0.3 \\
+-0.2
 \end{bmatrix}
 $$
 
-Then $\frac{1}{2} X^T dz = [0.05, 0.15, -0.1]^T$ – matches manual result.
+Then divide by $m = 2$:
 
-#### Summary
+$$
+\frac{1}{2} X^T dz = \begin{bmatrix}
+-0.1/2 \\ 0.3/2 \\ -0.2/2
+\end{bmatrix}
+= \begin{bmatrix}
+-0.05 \\ 0.15 \\ -0.1
+\end{bmatrix}
+$$
 
-- $X^T$ transposes the matrix so that features become rows and examples become columns, allowing a clean matrix multiplication that sums over examples for each feature.
-- The formula $dw = \frac{1}{m} X^T dz$ is a compact, vectorised way to compute all weight gradients at once.
+Exactly the same as the manual result.
+
+#### Why does this work?
+
+Because $X^T dz$ collects, for each feature, the sum of $dz_i \times X_{i,j}$ over all examples which is exactly what we need before dividing by $m$. The transpose flips the matrix so that features become rows, allowing a clean matrix multiplication that performs the weighted sum in one step.
 
 ---
 
