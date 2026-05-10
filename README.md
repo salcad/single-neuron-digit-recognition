@@ -156,7 +156,7 @@ The gradient $dw_j$ represents how much weight $w_j$ contributed to the overall 
 
 ---
 
-### Deep Dive: Why$X^T$(Transpose) Appears in $dw = \frac{1}{m} X^T dz$
+### Deep Dive: Why $X^T$ (Transpose) Appears in $dw = \frac{1}{m} X^T dz$
 
 Let me explain $dw = \frac{1}{m} X^T dz$ with a focus on why $X^T$ (the **transpose of $X$**) appears.
 
