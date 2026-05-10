@@ -1,4 +1,5 @@
 # Neural Network from Scratch: A Deep Dive into Single Neuron Classification
+**[👉 Click here to view 📄 README.pdf](./README.pdf)**
 
 **Understanding Gradient Descent, Backpropagation, and the Math Behind Machine Learning, One Neuron at a Time**
 
