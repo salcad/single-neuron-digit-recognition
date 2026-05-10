@@ -615,3 +615,92 @@ When training runs correctly, you should see:
 - High test accuracy (typically >95%)
 - Saved model files in `artifacts/neuron_weights.npy` and `artifacts/neuron_bias.npy`
 - A saved plot in `artifacts/loss_curve.png` showing the loss curve
+
+## Additional Notes
+
+### Binary Cross-Entropy (BCE)
+
+**Binary cross-entropy (BCE)** is a loss function used in binary classification models (e.g., logistic regression, neural networks) where the output is a probability between 0 and 1. It measures how well the predicted probabilities match the true binary labels (0 or 1). The lower the BCE, the better the model’s predictions.
+
+#### Formula
+
+For a single prediction $\hat{y}$ (predicted probability) and true label $y \in \{0,1\}$:
+
+$$
+L(y, \hat{y}) = - \big[ y \log(\hat{y}) + (1 - y) \log(1 - \hat{y}) \big]
+$$
+
+Over a dataset of $N$ samples, the average loss is:
+
+$$
+\text{BCE} = -\frac{1}{N} \sum_{i=1}^{N} \left[ y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i) \right]
+$$
+
+#### Intuition
+
+- If the true label is $y=1$, the loss becomes $-\log(\hat{y})$. This penalizes predictions $\hat{y}$ far from 1:  
+  - When $\hat{y} \to 1$, $\log(1)=0$ → loss small.  
+  - When $\hat{y} \to 0$, $\log(0) \to -\infty$ → loss huge.
+- If $y=0$, the loss becomes $-\log(1-\hat{y})$. This penalizes predictions far from 0.
+
+Essentially, BCE is the negative log-likelihood of a Bernoulli distribution. Minimizing it encourages the model to output high probabilities for the correct class.
+
+#### Example
+
+Suppose true label $y=1$ and model predicts $\hat{y}=0.9$:  
+$L = -\left[1 \cdot \log(0.9) + 0 \cdot \log(0.1)\right] = -\log(0.9) \approx 0.105$
+
+If $\hat{y}=0.6$: $L \approx 0.511$ (worse).  
+If $\hat{y}=0.1$: $L \approx 2.303$ (very bad).
+
+#### Why not mean squared error?
+
+BCE works better than MSE for classification because it has a smoother, convex error surface when paired with a sigmoid output, leading to faster and more reliable gradient descent.
+
+### Gradient Descent
+
+**Gradient descent** is an iterative optimization algorithm used to find the **minimum** of a function. In machine learning, it’s the workhorse for training models: you use it to minimize the **loss function** (e.g., binary cross-entropy) by adjusting the model’s parameters (weights).
+
+#### Intuition
+
+Imagine standing on a hill at night and wanting to reach the lowest valley. You can’t see far, but you can feel the slope under your feet. Gradient descent says: *take a step in the steepest downhill direction*. The “slope” is the **gradient** (partial derivatives) of the loss with respect to each parameter.
+
+#### Gradient Descent Dynamics
+
+- **Gradient** points in the direction of *steepest increase* of the loss.
+- So you move **opposite** the gradient to decrease the loss.
+
+#### Mathematical update rule
+
+For a parameter $\theta$ (e.g., a weight), the update at step $t$ is:
+
+$$
+\theta_{t+1} = \theta_t - \eta \cdot \nabla_\theta L(\theta_t)
+$$
+
+- $\eta$ (eta) = **learning rate** – size of each step.
+- $\nabla_\theta L$ = gradient of loss $L$ with respect to $\theta$.
+
+#### How it works (step-by-step)
+
+1. **Initialize** parameters randomly (or with zeros in some cases, but random is common).
+2. **Compute** the loss on the current batch/data (e.g., BCE).
+3. **Calculate** the gradient of the loss w.r.t. each parameter (using backpropagation in neural networks).
+4. **Update** each parameter by subtracting a fraction (the learning rate) of the gradient.
+5. **Repeat** until the loss stops decreasing (convergence) or after a fixed number of iterations.
+
+#### Relation to binary cross-entropy
+
+When you train a binary classifier with BCE as the loss, gradient descent tells you **how to change the weights** so that the predicted probabilities move closer to the true labels. The gradient of BCE with respect to the pre‑activation output (logit) is simply $(\hat{y} - y)$, which is intuitive and well‑behaved.
+
+#### Variants (quick mention)
+
+- **Batch GD** – uses entire dataset per update.
+- **Stochastic GD (SGD)** – uses one random sample per update (faster, noisy).
+- **Mini‑batch GD** – uses a small batch (common in practice).
+- **Adam**, **RMSprop**, etc. – adaptive learning‑rate methods built on gradient descent.
+
+#### Key takeaway
+
+Gradient descent is the engine that drives learning: it repeatedly takes small, informed steps downhill on the loss surface until it (hopefully) reaches the bottom – the set of parameters that minimizes the loss.
+
