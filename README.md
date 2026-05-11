@@ -1,5 +1,6 @@
 # Neural Network from Scratch: A Deep Dive into Single Neuron Classification
-**[👉 Click here to view 📄 README.pdf](./README.pdf)**
+👉 Click here to view **[ 📄 README.pdf](./README.pdf)** &
+**[📄 PRESENTATION.pdf](./PRESENTATION.pdf)**
 
 **Understanding Gradient Descent, Backpropagation, and the Math Behind Machine Learning, One Neuron at a Time**
 
@@ -703,4 +704,72 @@ When you train a binary classifier with BCE as the loss, gradient descent tells 
 #### Key takeaway
 
 Gradient descent is the engine that drives learning: it repeatedly takes small, informed steps downhill on the loss surface until it (hopefully) reaches the bottom – the set of parameters that minimizes the loss.
+
+### Prediction Error: $dz = \hat{y} - y$
+
+Loss derivative: $\frac{\partial L}{\partial \hat{y}}$
+
+For a single training example, binary cross‑entropy loss is:
+
+$$
+L = -[\, y \log \hat{y} + (1-y)\log(1-\hat{y}) \,]
+$$
+
+Taking the derivative with respect to $ \hat{y} $ gives:
+
+$$
+\frac{\partial L}{\partial \hat{y}} = -\frac{y}{\hat{y}} + \frac{1-y}{1-\hat{y}}
+$$
+
+Putting the two terms over a common denominator:
+
+$$
+\frac{\partial L}{\partial \hat{y}} = \frac{-y(1-\hat{y}) + (1-y)\hat{y}}{\hat{y}(1-\hat{y})}
+= \frac{-y + y\hat{y} + \hat{y} - y\hat{y}}{\hat{y}(1-\hat{y})}
+= \frac{\hat{y} - y}{\hat{y}(1-\hat{y})}
+$$
+
+So indeed:
+
+$$
+\boxed{\frac{\partial L}{\partial \hat{y}} = \frac{\hat{y} - y}{\hat{y}(1-\hat{y})}}
+$$
+
+#### Sigmoid derivative: $\frac{\partial \hat{y}}{\partial z}$
+
+We have $ \hat{y} = \sigma(z) = \frac{1}{1+e^{-z}} $. Its derivative is:
+
+$$
+\frac{\partial \hat{y}}{\partial z} = \hat{y}(1-\hat{y})
+$$
+
+#### Combining via chain rule
+
+The derivative of the loss with respect to $z$ (the pre‑activation) is:
+
+$$
+\frac{\partial L}{\partial z} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z}
+$$
+
+Substitute the two expressions:
+
+$$
+\frac{\partial L}{\partial z} = \left[ \frac{\hat{y} - y}{\hat{y}(1-\hat{y})} \right] \cdot \left[ \hat{y}(1-\hat{y}) \right]
+$$
+
+The $\hat{y}(1-\hat{y})$ terms **cancel completely**, leaving:
+
+$
+\boxed{\frac{\partial L}{\partial z} = \hat{y} - y}
+$
+
+#### The meaning of $ dz $
+
+In backpropagation code, we assign this derivative to a variable named `dz`:
+
+$
+dz \;\stackrel{\text{def}}{=}\; \frac{\partial L}{\partial z} = \hat{y} - y
+$
+
+So `dz` is simply the **prediction error**: the difference between the predicted probability $ \hat{y} $ and the true label $ y $. This is why the backward pass for a logistic neuron is so simple no complicated fractions or exponentials, just a clean subtraction.
 
