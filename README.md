@@ -1,6 +1,7 @@
 # Neural Network from Scratch: A Deep Dive into Single Neuron Classification
-👉 Click here to view **[ 📄 README.pdf](./README.pdf)** &
-**[📄 PRESENTATION.pdf](./PRESENTATION.pdf)**
+**[ 📄 README.pdf](./README.pdf)** & **[📄 PRESENTATION.pdf](./PRESENTATION.pdf)**
+
+**[Live Demo](https://huggingface.co/spaces/SFajri/single-neuron-demo)**
 
 **Understanding Gradient Descent, Backpropagation, and the Math Behind Machine Learning, One Neuron at a Time**
 
@@ -772,4 +773,3 @@ dz \;\stackrel{\text{def}}{=}\; \frac{\partial L}{\partial z} = \hat{y} - y
 $
 
 So `dz` is simply the **prediction error**: the difference between the predicted probability $ \hat{y} $ and the true label $ y $. This is why the backward pass for a logistic neuron is so simple no complicated fractions or exponentials, just a clean subtraction.
-
